@@ -1,0 +1,84 @@
+# Wordpress deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress
+spec:
+  replicas: 3 # Start with 3 replicas for High Availability
+  selector:
+    matchLabels:
+      app: wordpress
+  template:
+    metadata:
+      labels:
+        app: wordpress
+    spec:
+      containers:
+        - name: wordpress
+          image: wordpress:latest
+          # Set port number for container pods
+          ports:
+            - containerPort: 80
+          # Set resource limits for scaling
+          resources:
+            requests:
+              cpu: "250m" # Request 0.25 of a CPU core
+              memory: "256Mi" # Request 256 Mebibytes of memory
+            limits:
+              cpu: "500m" # Do not allow the pod to use more than 0.5 of a CPU core
+              memory: "512Mi" # Do not allow the pod to use more than 512 Mebibytes
+          # Provide enviroment variables for database
+          env:
+            - name: WORDPRESS_DB_HOST
+              value: wordpress-mysql # The name of the MySQL service
+            - name: WORDPRESS_DB_NAME
+              value: wordpress
+            - name: WORDPRESS_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: wordpress-db-credentials
+                  key: username
+            - name: WORDPRESS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wordpress-db-credentials
+                  key: password
+          # Mount volume and claim a persistent volume
+          volumeMounts:
+            - name: wordpress-persistent-storage
+              mountPath: /var/www/html
+      volumes:
+        - name: wordpress-persistent-storage
+          persistentVolumeClaim:
+            claimName: wordpress-pv-claim
+---
+# Horizontal Pod Autoscaler for WordPress
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: wordpress-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: wordpress
+  minReplicas: 3 # Requirement: minimum of 3 active containers
+  maxReplicas: 6 # Requirement: max scaling of 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70 # Scale up if CPU usage exceeds 70%
+---
+# Pod disruption budget (recommended by GKE dashboard)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: wordpress-pdb
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: wordpress
