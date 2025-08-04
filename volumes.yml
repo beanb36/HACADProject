@@ -1,0 +1,26 @@
+# Persistent volumes for MySQL and Wordpress
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+spec:
+  accessModes:
+    - ReadWriteOnce # Can be mounted by a single node
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: wordpress-pv-claim
+spec:
+  accessModes:
+    - ReadWriteMany # Can be mounted by multiple nodes
+  resources:
+    requests:
+      # As per the Filestore CSI driver documentation,
+      # the minimum size is 100GiB for the basic HDD
+      # specified in wordpress-standard-rwx.yml
+      storage: 100Gi
+  storageClassName: wordpress-standard-rwx

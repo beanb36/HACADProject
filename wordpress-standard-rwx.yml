@@ -1,0 +1,19 @@
+# Declare storage class for Wordpress (default storage-rwx only works on default network)
+allowVolumeExpansion: true
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  annotations:
+    components.gke.io/component-name: filestorecsi
+    components.gke.io/component-version: 0.12.22
+    components.gke.io/layer: addon
+  labels:
+    addonmanager.kubernetes.io/mode: EnsureExists
+    k8s-app: gcp-filestore-csi-driver
+  name: wordpress-standard-rwx # Title the new storage class
+parameters:
+  tier: basic_hdd # Set the Filestore tier for the new storage class
+  network: project-vpc #automatically changed by setup script
+provisioner: filestore.csi.storage.gke.io
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer

@@ -1,0 +1,19 @@
+# Load balancer for Wordpress container pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress
+spec:
+  selector:
+    # Specify target deployment for service
+    app: wordpress
+  ports:
+    # Set port for Wordpress
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  # LoadBalancer type provisions a GCP external load balancer
+  type: LoadBalancer
+  # Restrict external access if the user sets a subnet in the setup script.
+  loadBalancerSourceRanges:
+    - "0.0.0.0/0"
