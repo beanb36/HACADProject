@@ -1,0 +1,57 @@
+# backup-cronjob.yml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mysql-backup
+spec:
+  schedule: "0 2 * * *" # Run every day at 2:00 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          initContainers:
+            - name: lvm-setup
+              image: ubuntu:24.04 # Use LTS
+              command:
+                - "/bin/bash"
+                - "-c"
+                - |
+                  apt-get update && apt-get install -y lvm2
+                  pvcreate /dev/sdb
+                  vgcreate backup-vg /dev/sdb
+                  lvcreate -l 100%FREE -n backup-lv backup-vg
+              securityContext:
+                privileged: true
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /dev
+          containers:
+            - name: mysql-backup
+              image: mysql:lts
+              command:
+                - "/bin/bash"
+                - "-c"
+                - |
+                  apt-get update && apt-get install -y lvm2
+                  mount /dev/backup-vg/backup-lv /backup
+                  mysqldump -h wordpress-mysql -u root -p$MYSQL_ROOT_PASSWORD --databases wordpress > /backup/wordpress-backup-$(date +%Y-%m-%d-%H-%M-%S).sql
+              env:
+                - name: MYSQL_ROOT_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: mysql-pass
+                      key: password
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backup
+                - name: mysql-persistent-storage # Mount the MySQL data volume
+                  mountPath: /var/lib/mysql
+                  readOnly: true
+          restartPolicy: OnFailure
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: mysql-backup-pv-claim
+            - name: mysql-persistent-storage # Use the same PVC as MySQL
+              persistentVolumeClaim:
+                claimName: mysql-pv-claim
