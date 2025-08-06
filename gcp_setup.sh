@@ -142,6 +142,14 @@ kubectl apply -f wordpress-standard-rwx.yml -n wordpress
 echo "Applying wordpress.yml..."
 kubectl apply -f wordpress.yml -n wordpress
 
+# 4. Configure the backup system
+echo "Setting up database backup backed by LVM..."
+echo "Applying backup-pvc.yml..."
+kubectl apply -f backup-pvc.yml -n wordpress
+
+echo "Applying backup-cronjob.yml..."
+kubectl apply -f backup-cronjob.yml -n wordpress
+
 # Let the user know everything went well and to be patient.
 echo "Kubernetes deployment complete!"
 echo "It may take a few minutes for the external IP for WordPress to become available."
