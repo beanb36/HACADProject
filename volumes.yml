@@ -24,3 +24,15 @@ spec:
       # specified in wordpress-standard-rwx.yml
       storage: 100Gi
   storageClassName: wordpress-standard-rwx
+---
+# MySQL backup PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-backup-pv-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
